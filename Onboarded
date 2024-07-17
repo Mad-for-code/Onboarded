@@ -1,0 +1,424 @@
+Sure, I'll guide you step-by-step on how to create a Java 17 web application in IntelliJ for the GHCPOnboarding project. This application will allow users to nominate themselves for software access and perform eligibility checks against quotas obtained from HEET. We'll use Spring Boot for the backend, JSON files for the database, and a simple HTML/CSS/JavaScript front-end.
+
+### Step 1: Set Up IntelliJ and Create a New Project
+
+1. **Open IntelliJ IDEA.**
+2. **Create a new project:**
+   - Click on `File` > `New` > `Project`.
+   - Select `Spring Initializr` and click `Next`.
+   - Set the following:
+     - Group: `com.example`
+     - Artifact: `GHCPOnboarding`
+     - Name: `GHCPOnboarding`
+     - Type: `Maven`
+     - Java Version: `17`
+   - Click `Next`.
+
+3. **Select Dependencies:**
+   - Add the following dependencies:
+     - Spring Web
+     - Spring Data JPA
+     - Spring Boot DevTools
+     - Spring Boot Actuator
+     - Jackson Databind (for JSON handling)
+
+4. **Finish and Create the Project:**
+   - Click `Finish`. IntelliJ will create the project structure for you.
+
+### Step 2: Project Structure
+
+Your project structure will look like this:
+
+```
+GHCPOnboarding
+|-- src
+|   |-- main
+|       |-- java
+|       |   |-- com.example.GHCPOnboarding
+|       |       |-- GHCPOnboardingApplication.java
+|       |       |-- controller
+|       |       |   |-- NominationController.java
+|       |       |-- model
+|       |       |   |-- Nomination.java
+|       |       |-- repository
+|       |       |   |-- NominationRepository.java
+|       |       |-- service
+|       |       |   |-- NominationService.java
+|       |-- resources
+|           |-- static
+|           |   |-- index.html
+|           |-- application.properties
+|           |-- quotas.json
+|-- pom.xml
+```
+
+### Step 3: Create the `GHCPOnboardingApplication.java`
+
+```java
+package com.example.GHCPOnboarding;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class GHCPOnboardingApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(GHCPOnboardingApplication.class, args);
+    }
+}
+```
+
+### Step 4: Create the Model
+
+**Nomination.java**
+
+```java
+package com.example.GHCPOnboarding.model;
+
+public class Nomination {
+    private String name;
+    private String email;
+    private String software;
+
+    // Constructors, getters, and setters
+    public Nomination() {}
+
+    public Nomination(String name, String email, String software) {
+        this.name = name;
+        this.email = email;
+        this.software = software;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getSoftware() {
+        return software;
+    }
+
+    public void setSoftware(String software) {
+        this.software = software;
+    }
+}
+```
+
+### Step 5: Create the Repository
+
+**NominationRepository.java**
+
+```java
+package com.example.GHCPOnboarding.repository;
+
+import com.example.GHCPOnboarding.model.Nomination;
+import org.springframework.stereotype.Repository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
+@Repository
+public class NominationRepository {
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final File file = new File("src/main/resources/nominations.json");
+
+    public List<Nomination> findAll() throws IOException {
+        return objectMapper.readValue(file, new TypeReference<>() {});
+    }
+
+    public void saveAll(List<Nomination> nominations) throws IOException {
+        objectMapper.writeValue(file, nominations);
+    }
+}
+```
+
+### Step 6: Create the Service
+
+**NominationService.java**
+
+```java
+package com.example.GHCPOnboarding.service;
+
+import com.example.GHCPOnboarding.model.Nomination;
+import com.example.GHCPOnboarding.repository.NominationRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
+@Service
+public class NominationService {
+    @Autowired
+    private NominationRepository nominationRepository;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final File quotasFile = new File("src/main/resources/quotas.json");
+
+    public List<Nomination> getAllNominations() throws IOException {
+        return nominationRepository.findAll();
+    }
+
+    public boolean checkEligibility(Nomination nomination) throws IOException {
+        List<String> quotas = objectMapper.readValue(quotasFile, new TypeReference<>() {});
+        return quotas.contains(nomination.getSoftware());
+    }
+
+    public void saveNomination(Nomination nomination) throws IOException {
+        List<Nomination> nominations = nominationRepository.findAll();
+        nominations.add(nomination);
+        nominationRepository.saveAll(nominations);
+    }
+}
+```
+
+### Step 7: Create the Controller
+
+**NominationController.java**
+
+```java
+package com.example.GHCPOnboarding.controller;
+
+import com.example.GHCPOnboarding.model.Nomination;
+import com.example.GHCPOnboarding.service.NominationService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/nominations")
+public class NominationController {
+
+    @Autowired
+    private NominationService nominationService;
+
+    @GetMapping
+    public List<Nomination> getAllNominations() throws IOException {
+        return nominationService.getAllNominations();
+    }
+
+    @PostMapping
+    public String nominate(@RequestBody Nomination nomination) throws IOException {
+        if (nominationService.checkEligibility(nomination)) {
+            nominationService.saveNomination(nomination);
+            return "Nomination successful!";
+        } else {
+            return "Nomination failed: Not eligible.";
+        }
+    }
+}
+```
+
+### Step 8: Create Front-End Files
+
+**index.html** (Place in `src/main/resources/static`)
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHCP Onboarding</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <h1>GHCP Onboarding</h1>
+        <form id="nominationForm">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required><br><br>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required><br><br>
+            <label for="software">Software:</label>
+            <input type="text" id="software" name="software" required><br><br>
+            <button type="submit">Nominate</button>
+        </form>
+        <p id="response"></p>
+    </div>
+    <script src="scripts.js"></script>
+</body>
+</html>
+```
+
+**styles.css** (Place in `src/main/resources/static`)
+
+```css
+body {
+    font-family: Arial, sans-serif;
+}
+
+#app {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    margin: 5px 0;
+}
+
+input, button {
+    padding: 10px;
+    margin: 5px 0;
+}
+```
+
+**scripts.js** (Place in `src/main/resources/static`)
+
+```javascript
+document.getElementById('nominationForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    const formData = {
+        name: event.target.name.value,
+        email: event.target.email.value,
+        software: event.target.software.value,
+    };
+
+    fetch('/api/nominations', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+    })
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById('response').textContent = data;
+    })
+    .catch(error => console.error('Error:', error));
+});
+```
+
+### Step 9: Create JSON Files
+
+**application.properties** (Place in `src/main/resources`)
+
+```properties
+spring.jackson.serialization.indent-output=true
+```
+
+**quotas.json** (Place in `src/main/resources`)
+
+```json
+[
+    "Software1",
+    "Software2",
+    "Software3"
+]
+```
+
+**nominations.json** (Place in `src/main/resources`)
+
+```json
+[]
+```
+
+### Step 10: Create the `pom.xml`
+
+Make sure your `pom.xml` includes all
+
+ necessary dependencies:
+
+```xml
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>GHCPOnboarding</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <name>GHCPOnboarding</name>
+    <description>Demo project for GHCP Onboarding</description>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.7.1</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+```
+
+### Step 11: Run the Application
+
+1. **Run the application:**
+   - In IntelliJ, right-click on `GHCPOnboardingApplication.java` and select `Run 'GHCPOnboardingApplication'`.
+
+2. **Access the application:**
+   - Open a web browser and navigate to `http://localhost:8080`.
+   - You should see the nomination form. You can submit a nomination and see the response.
+
+This setup provides a basic foundation for your GHCPOnboarding web application. You can further enhance and customize it as per your requirements.
