@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Information</title>
+    <title>Employee Nomination</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,105 +12,87 @@
             background-color: #f4f4f4;
         }
         .container {
-            max-width: 600px;
+            width: 50%;
             margin: 50px auto;
             padding: 20px;
             background-color: #fff;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
         }
-        .form-group {
-            margin-bottom: 20px;
+        h1 {
+            text-align: center;
+            color: #333;
         }
-        label {
-            display: block;
-            margin-bottom: 5px;
+        .employee-info {
+            margin: 20px 0;
         }
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
+        .employee-info p {
+            font-size: 18px;
+            color: #555;
         }
         .buttons {
             display: flex;
-            justify-content: space-between;
-        }
-        button {
-            padding: 10px 20px;
-            border: none;
-            background-color: #007BFF;
-            color: white;
-            cursor: pointer;
-        }
-        button.decline {
-            background-color: #DC3545;
-        }
-        button:hover {
-            opacity: 0.8;
-        }
-        .employee-info {
+            justify-content: space-around;
             margin-top: 20px;
         }
-        .employee-info p {
-            margin: 5px 0;
+        .buttons button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .approve {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .decline {
+            background-color: #f44336;
+            color: white;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="form-group">
-            <label for="psid">Enter PSID:</label>
-            <input type="text" id="psid">
+        <h1>Employee Nomination</h1>
+        <div class="employee-info" id="employee-info">
+            <p><strong>Name:</strong> <span id="name"></span></p>
+            <p><strong>PSID:</strong> <span id="psid"></span></p>
+            <p><strong>Email:</strong> <span id="email"></span></p>
         </div>
-        <button onclick="fetchEmployee()">Fetch Employee Info</button>
-
-        <div class="employee-info" id="employee-info"></div>
-
-        <div class="buttons" id="action-buttons" style="display: none;">
-            <button onclick="approveRequest()">Approve</button>
-            <button class="decline" onclick="declineRequest()">Decline</button>
+        <div class="buttons">
+            <button class="approve" onclick="handleAction('approve')">Approve</button>
+            <button class="decline" onclick="handleAction('decline')">Decline</button>
         </div>
     </div>
 
     <script>
-        async function fetchEmployee() {
-            const psid = document.getElementById('psid').value;
-            const employeeInfoDiv = document.getElementById('employee-info');
-            const actionButtonsDiv = document.getElementById('action-buttons');
+        document.addEventListener('DOMContentLoaded', () => {
+            const randomPsid = Math.floor(Math.random() * 1000) + 1;  // Generate a random PSID
+            fetchEmployeeData(randomPsid);
+        });
 
-            if (!psid) {
-                employeeInfoDiv.innerHTML = "<p>Please enter a PSID.</p>";
-                actionButtonsDiv.style.display = "none";
-                return;
-            }
+        function fetchEmployeeData(psid) {
+            // Simulated fetch function with dummy data
+            const dummyData = {
+                name: "John Doe",
+                psid: psid,
+                email: "johndoe@example.com"
+            };
 
-            try {
-                const response = await fetch(`/api/employees/${psid}`);
-                if (response.ok) {
-                    const employee = await response.json();
-                    employeeInfoDiv.innerHTML = `
-                        <p><strong>PSID:</strong> ${employee.psid}</p>
-                        <p><strong>Name:</strong> ${employee.name}</p>
-                        <p><strong>Email:</strong> ${employee.email}</p>
-                        <p><strong>Department:</strong> ${employee.department}</p>
-                    `;
-                    actionButtonsDiv.style.display = "flex";
-                } else {
-                    employeeInfoDiv.innerHTML = "<p>Employee not found.</p>";
-                    actionButtonsDiv.style.display = "none";
-                }
-            } catch (error) {
-                console.error('Error fetching employee:', error);
-                employeeInfoDiv.innerHTML = "<p>There was an error fetching the employee information.</p>";
-                actionButtonsDiv.style.display = "none";
-            }
+            // Display the fetched data
+            document.getElementById('name').innerText = dummyData.name;
+            document.getElementById('psid').innerText = dummyData.psid;
+            document.getElementById('email').innerText = dummyData.email;
         }
 
-        function approveRequest() {
-            alert('Request Approved!');
-        }
-
-        function declineRequest() {
-            alert('Request Declined!');
+        function handleAction(action) {
+            const psid = document.getElementById('psid').innerText;
+            if (action === 'approve') {
+                alert(`Nomination for PSID ${psid} approved.`);
+            } else if (action === 'decline') {
+                alert(`Nomination for PSID ${psid} declined.`);
+            }
         }
     </script>
 </body>
