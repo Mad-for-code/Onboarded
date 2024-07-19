@@ -1,105 +1,102 @@
+Yes, you can render an HTML page in a `@GetMapping` function in a Spring Boot application. This is typically done using a templating engine like Thymeleaf. Here's how you can do it:
 
+### 1. **Set Up Thymeleaf Dependency**
+
+First, ensure you have the Thymeleaf dependency in your `pom.xml` (for Maven) or `build.gradle` (for Gradle) file.
+
+**Maven:**
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-thymeleaf</artifactId>
+</dependency>
+```
+
+**Gradle:**
+
+```groovy
+implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+```
+
+### 2. **Create a Controller**
+
+Create a Spring Boot controller with a `@GetMapping` method to render the HTML page.
+
+```java
+package com.example.demo.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
+
+@Controller
+public class MyController {
+
+    @GetMapping("/approval")
+    public String getApprovalPage(@RequestParam(name = "psid", required = false) String psid, Model model) {
+        model.addAttribute("psid", psid);
+        return "approval"; // Thymeleaf template name (without .html)
+    }
+}
+```
+
+In this example, `@GetMapping("/approval")` maps the `/approval` URL to the `getApprovalPage` method. The method adds an attribute `psid` to the model, which can be accessed in the Thymeleaf template.
+
+### 3. **Create Thymeleaf Template**
+
+Create an HTML file in the `src/main/resources/templates` directory.
+
+**`src/main/resources/templates/approval.html`**:
+
+```html
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Nomination</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
-        .container {
-            width: 50%;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        .employee-info {
-            margin: 20px 0;
-        }
-        .employee-info p {
-            font-size: 18px;
-            color: #555;
-        }
-        .buttons {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 20px;
-        }
-        .buttons button {
-            padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .approve {
-            background-color: #4CAF50;
-            color: white;
-        }
-        .decline {
-            background-color: #f44336;
-            color: white;
-        }
-    </style>
+    <title>Approval Page</title>
 </head>
 <body>
-    <div class="container">
-        <h1>Employee Nomination</h1>
-        <div class="employee-info" id="employee-info">
-            <p><strong>Name:</strong> <span id="name"></span></p>
-            <p><strong>PSID:</strong> <span id="psid"></span></p>
-            <p><strong>Email:</strong> <span id="email"></span></p>
-        </div>
-        <div class="buttons">
-            <button class="approve" onclick="handleAction('approve')">Approve</button>
-            <button class="decline" onclick="handleAction('decline')">Decline</button>
-        </div>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const randomPsid = Math.floor(Math.random() * 1000) + 1;  // Generate a random PSID
-            fetchEmployeeData(randomPsid);
-        });
-
-        async function fetchEmployeeData(psid) {
-            try {
-                const response = await fetch(`https://dummyapi.io/data/api/user/${psid}`, {
-                    headers: { 'app-id': 'YOUR_DUMMY_API_APP_ID' }  // Replace with your Dummy API app-id
-                });
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                const data = await response.json();
-                // Display the fetched data
-                document.getElementById('name').innerText = data.name || 'N/A';
-                document.getElementById('psid').innerText = psid;
-                document.getElementById('email').innerText = data.email || 'N/A';
-            } catch (error) {
-                console.error('Fetch error:', error);
-                alert('Failed to fetch employee data. Please try again later.');
-            }
-        }
-
-        function handleAction(action) {
-            const psid = document.getElementById('psid').innerText;
-            if (action === 'approve') {
-                alert(`Nomination for PSID ${psid} approved.`);
-            } else if (action === 'decline') {
-                alert(`Nomination for PSID ${psid} declined.`);
-            }
-        }
-    </script>
+    <h1>Employee Details</h1>
+    <p>PSID: <span th:text="${psid}"></span></p>
+    <!-- Add more fields as needed -->
 </body>
 </html>
+```
+
+### 4. **Run the Application and Access the URL**
+
+Start your Spring Boot application and access the URL in your browser:
+
+```
+http://localhost:8080/approval?psid=123
+```
+
+You should see the `approval.html` page rendered with the `psid` value displayed.
+
+### Troubleshooting
+
+- **404 Not Found**: Ensure the URL matches the mapping in your controller.
+- **Circular View Path Error**: Ensure there is no recursion in view names and controller mappings.
+- **Check Thymeleaf Configuration**: Ensure Thymeleaf is correctly configured in your `application.properties`.
+
+**`application.properties`** (optional, default configuration is usually sufficient):
+
+```properties
+spring.thymeleaf.prefix=classpath:/templates/
+spring.thymeleaf.suffix=.html
+spring.thymeleaf.mode=HTML
+```
+
+### Summary
+
+To render an HTML page in a `@GetMapping` function using Spring Boot and Thymeleaf:
+
+1. Add Thymeleaf dependency.
+2. Create a controller with a `@GetMapping` method.
+3. Create a Thymeleaf template in `src/main/resources/templates`.
+4. Run the application and access the URL to see the rendered HTML page.
+
+This approach allows you to dynamically render HTML pages with data passed from the controller.
