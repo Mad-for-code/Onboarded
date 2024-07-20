@@ -1,102 +1,223 @@
-Yes, you can render an HTML page in a `@GetMapping` function in a Spring Boot application. This is typically done using a templating engine like Thymeleaf. Here's how you can do it:
 
-### 1. **Set Up Thymeleaf Dependency**
+Here's a step-by-step guide to creating the GHCPOnboarding project using Java 17 and Spring Boot, with a basic frontend for handling the specified functionalities.
 
-First, ensure you have the Thymeleaf dependency in your `pom.xml` (for Maven) or `build.gradle` (for Gradle) file.
+### Step 1: Set Up the Spring Boot Project
 
-**Maven:**
+1. **Initialize the Project**: You can use Spring Initializr (https://start.spring.io/) to generate the basic structure of your Spring Boot project.
+   - Project: Maven
+   - Language: Java
+   - Spring Boot: 2.7.2
+   - Group: com.example
+   - Artifact: GHCPOnboarding
+   - Dependencies: Spring Web, Spring Data JPA, H2 Database, Spring Boot DevTools
 
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-thymeleaf</artifactId>
-</dependency>
-```
+2. **Extract the Project** and open it in IntelliJ IDEA.
 
-**Gradle:**
+### Step 2: Set Up the Backend
 
-```groovy
-implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
-```
-
-### 2. **Create a Controller**
-
-Create a Spring Boot controller with a `@GetMapping` method to render the HTML page.
+#### 2.1 Create the Entity Class
 
 ```java
-package com.example.demo.controller;
+package com.example.ghcponboarding.model;
 
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.ModelAndView;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import java.time.LocalDateTime;
 
-@Controller
-public class MyController {
+@Entity
+public class Nominee {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String nomineeName;
+    private String nomineePsid;
+    private String nomineeEmail;
+    private String level3Dept;
+    private LocalDateTime timestamp;
+    private String accessGranted;
 
-    @GetMapping("/approval")
-    public String getApprovalPage(@RequestParam(name = "psid", required = false) String psid, Model model) {
-        model.addAttribute("psid", psid);
-        return "approval"; // Thymeleaf template name (without .html)
+    // Getters and Setters
+}
+```
+
+#### 2.2 Create the Repository Interface
+
+```java
+package com.example.ghcponboarding.repository;
+
+import com.example.ghcponboarding.model.Nominee;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface NomineeRepository extends JpaRepository<Nominee, Long> {
+}
+```
+
+#### 2.3 Create the Service Class
+
+```java
+package com.example.ghcponboarding.service;
+
+import com.example.ghcponboarding.model.Nominee;
+import com.example.ghcponboarding.repository.NomineeRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+public class NomineeService {
+    @Autowired
+    private NomineeRepository nomineeRepository;
+
+    public Nominee saveNominee(Nominee nominee) {
+        nominee.setTimestamp(LocalDateTime.now());
+        nominee.setAccessGranted("yes");
+        return nomineeRepository.save(nominee);
+    }
+
+    public List<Nominee> saveAllNominees(List<Nominee> nominees) {
+        nominees.forEach(nominee -> {
+            nominee.setTimestamp(LocalDateTime.now());
+            nominee.setAccessGranted("yes");
+        });
+        return nomineeRepository.saveAll(nominees);
+    }
+
+    public List<Nominee> getAllNominees() {
+        return nomineeRepository.findAll();
     }
 }
 ```
 
-In this example, `@GetMapping("/approval")` maps the `/approval` URL to the `getApprovalPage` method. The method adds an attribute `psid` to the model, which can be accessed in the Thymeleaf template.
+#### 2.4 Create the Controller Class
 
-### 3. **Create Thymeleaf Template**
+```java
+package com.example.ghcponboarding.controller;
 
-Create an HTML file in the `src/main/resources/templates` directory.
+import com.example.ghcponboarding.model.Nominee;
+import com.example.ghcponboarding.service.NomineeService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import com.opencsv.bean.CsvToBeanBuilder;
 
-**`src/main/resources/templates/approval.html`**:
+import java.io.InputStreamReader;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/nominees")
+public class NomineeController {
+    @Autowired
+    private NomineeService nomineeService;
+
+    @PostMapping("/upload")
+    public List<Nominee> uploadCsv(@RequestParam("file") MultipartFile file) throws Exception {
+        List<Nominee> nominees = new CsvToBeanBuilder<Nominee>(new InputStreamReader(file.getInputStream()))
+                .withType(Nominee.class).build().parse();
+        return nomineeService.saveAllNominees(nominees);
+    }
+
+    @GetMapping
+    public List<Nominee> getAllNominees() {
+        return nomineeService.getAllNominees();
+    }
+}
+```
+
+#### 2.5 Update `application.properties`
+
+```properties
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=password
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.h2.console.enabled=true
+```
+
+### Step 3: Set Up the Frontend
+
+#### 3.1 Create a Basic HTML Page (src/main/resources/static/index.html)
 
 ```html
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Approval Page</title>
+    <title>GHCP Onboarding</title>
 </head>
 <body>
-    <h1>Employee Details</h1>
-    <p>PSID: <span th:text="${psid}"></span></p>
-    <!-- Add more fields as needed -->
+    <h1>GHCP Onboarding</h1>
+    <div>
+        <button onclick="location.href='/approve'">Approve Self Desk Request</button>
+        <button onclick="location.href='/upload'">Upload Approved Bulk Nominated CSV File</button>
+    </div>
+
+    <div id="uploadSection" style="display:none;">
+        <h2>Upload CSV File</h2>
+        <form action="/api/nominees/upload" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".csv" required>
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+
+    <script>
+        const url = window.location.pathname;
+        if (url === '/upload') {
+            document.getElementById('uploadSection').style.display = 'block';
+        }
+    </script>
 </body>
 </html>
 ```
 
-### 4. **Run the Application and Access the URL**
+#### 3.2 Create Controller for View Rendering
 
-Start your Spring Boot application and access the URL in your browser:
+```java
+package com.example.ghcponboarding.controller;
 
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class ViewController {
+
+    @GetMapping("/")
+    public String home() {
+        return "index";
+    }
+
+    @GetMapping("/approve")
+    public String approve() {
+        // Logic for approving self desk request can be implemented here
+        return "index";  // Redirecting back to home for now
+    }
+
+    @GetMapping("/upload")
+    public String upload() {
+        return "index";
+    }
+}
 ```
-http://localhost:8080/approval?psid=123
+
+### Step 4: Add CSV Parsing Dependency
+
+Add the following dependency to your `pom.xml` for CSV parsing:
+
+```xml
+<dependency>
+    <groupId>com.opencsv</groupId>
+    <artifactId>opencsv</artifactId>
+    <version>5.5.2</version>
+</dependency>
 ```
 
-You should see the `approval.html` page rendered with the `psid` value displayed.
+### Step 5: Run the Application
 
-### Troubleshooting
+- Run the application from IntelliJ by executing the `GHCPOnboardingApplication` class.
+- Open your browser and navigate to `http://localhost:8080`.
 
-- **404 Not Found**: Ensure the URL matches the mapping in your controller.
-- **Circular View Path Error**: Ensure there is no recursion in view names and controller mappings.
-- **Check Thymeleaf Configuration**: Ensure Thymeleaf is correctly configured in your `application.properties`.
-
-**`application.properties`** (optional, default configuration is usually sufficient):
-
-```properties
-spring.thymeleaf.prefix=classpath:/templates/
-spring.thymeleaf.suffix=.html
-spring.thymeleaf.mode=HTML
-```
-
-### Summary
-
-To render an HTML page in a `@GetMapping` function using Spring Boot and Thymeleaf:
-
-1. Add Thymeleaf dependency.
-2. Create a controller with a `@GetMapping` method.
-3. Create a Thymeleaf template in `src/main/resources/templates`.
-4. Run the application and access the URL to see the rendered HTML page.
-
-This approach allows you to dynamically render HTML pages with data passed from the controller.
+This setup provides a basic structure for your project. You can extend the functionality by adding more features, refining the UI, and enhancing error handling as needed.
