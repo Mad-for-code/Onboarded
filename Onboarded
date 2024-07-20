@@ -221,3 +221,61 @@ Add the following dependency to your `pom.xml` for CSV parsing:
 - Open your browser and navigate to `http://localhost:8080`.
 
 This setup provides a basic structure for your project. You can extend the functionality by adding more features, refining the UI, and enhancing error handling as needed.
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GHCP Onboarding</title>
+</head>
+<body>
+    <h1>GHCP Onboarding</h1>
+    <div>
+        <button onclick="location.href='/approve'">Approve Self Desk Request</button>
+        <button onclick="showUploadSection()">Upload Approved Bulk Nominated CSV File</button>
+    </div>
+
+    <div id="uploadSection" style="display:none;">
+        <h2>Upload CSV File</h2>
+        <input type="file" id="fileInput" accept=".csv" required>
+        <button onclick="uploadFile()">Upload</button>
+    </div>
+
+    <script>
+        function showUploadSection() {
+            document.getElementById('uploadSection').style.display = 'block';
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a file to upload');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/nominees/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert('File uploaded successfully');
+                    console.log(result);
+                } else {
+                    alert('File upload failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while uploading the file');
+            }
+        }
+    </script>
+</body>
+</html>
