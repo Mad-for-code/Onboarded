@@ -1,52 +1,154 @@
+Here is a simple implementation of your requirements using HTML, CSS, and JavaScript. The HTML file includes the form to input the PSID, and upon submission, displays the options to either approve a service desk nomination or upload an approved bulk-nominated CSV file. 
 
-package com.example.ghcponboarding.controller;
+### HTML (`index.html`)
 
-import com.example.ghcponboarding.model.Nominee;
-import com.example.ghcponboarding.service.NomineeService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Desk Nomination</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Service Desk Nomination</h1>
+        <form id="psidForm">
+            <label for="psid">Enter PSID:</label>
+            <input type="text" id="psid" name="psid" required>
+            <button type="submit">Submit</button>
+        </form>
+        <div id="options" class="hidden">
+            <button id="approveBtn">Approve Service Desk Nomination</button>
+            <button id="uploadBtn">Upload Approved Bulk Nominated CSV File</button>
+        </div>
+        <div id="result"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+```
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+### CSS (`styles.css`)
 
-@RestController
-@RequestMapping("/api/nominees")
-public class NomineeController {
-    @Autowired
-    private NomineeService nomineeService;
-
-    @PostMapping("/upload")
-    public List<Nominee> uploadCsv(@RequestParam("file") MultipartFile file) throws Exception {
-        List<Nominee> nominees = new ArrayList<>();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()));
-        String line;
-
-        // Skip the header
-        reader.readLine();
-
-        while ((line = reader.readLine()) != null) {
-            String[] fields = line.split(",");
-            if (fields.length == 4) {
-                Nominee nominee = new Nominee();
-                nominee.setNomineeName(fields[0]);
-                nominee.setNomineePsid(fields[1]);
-                nominee.setNomineeEmail(fields[2]);
-                nominee.setLevel3Dept(fields[3]);
-                nominee.setTimestamp(LocalDateTime.now());
-                nominee.setAccessGranted("yes");
-                nominees.add(nominee);
-            }
-        }
-
-        return nomineeService.saveAllNominees(nominees);
-    }
-
-    @GetMapping
-    public List<Nominee> getAllNominees() {
-        return nomineeService.getAllNominees();
-    }
+```css
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
 }
+
+.container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    padding: 10px 20px;
+    margin: 10px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.hidden {
+    display: none;
+}
+```
+
+### JavaScript (`script.js`)
+
+```javascript
+document.getElementById('psidForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    document.getElementById('options').classList.remove('hidden');
+});
+
+document.getElementById('approveBtn').addEventListener('click', function() {
+    const psid = document.getElementById('psid').value;
+    fetch(`/api/approve?psid=${psid}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('result').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        })
+        .catch(error => {
+            document.getElementById('result').innerHTML = `<p>Error fetching data: ${error}</p>`;
+        });
+});
+
+document.getElementById('uploadBtn').addEventListener('click', function() {
+    const uploadDiv = document.createElement('div');
+    uploadDiv.innerHTML = `
+        <input type="file" id="csvFile" accept=".csv">
+        <button id="uploadCsvBtn">Upload CSV</button>
+    `;
+    document.getElementById('result').appendChild(uploadDiv);
+
+    document.getElementById('uploadCsvBtn').addEventListener('click', function() {
+        const fileInput = document.getElementById('csvFile');
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('result').innerHTML = `<p>File uploaded successfully: ${JSON.stringify(data)}</p>`;
+        })
+        .catch(error => {
+            document.getElementById('result').innerHTML = `<p>Error uploading file: ${error}</p>`;
+        });
+    });
+});
+```
+
+### Explanation
+
+1. **HTML:**
+    - The form asks for a PSID and submits it.
+    - Two options appear after the form is submitted: approving the service desk nomination or uploading a CSV file.
+    - The result of either action will be displayed in the `#result` div.
+
+2. **CSS:**
+    - Basic styling for the form and buttons to make them visually appealing.
+
+3. **JavaScript:**
+    - Handles the form submission to show options.
+    - Handles the click event for approving the service desk nomination, fetching data based on the PSID, and displaying the result.
+    - Handles the click event for uploading a CSV file, sending the file as a `POST` request, and displaying the result.
+
+Make sure to replace the `/api/approve` and `/api/upload` URLs with your actual backend endpoints.
