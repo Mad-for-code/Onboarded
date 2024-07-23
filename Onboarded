@@ -1,154 +1,113 @@
-Here is a simple implementation of your requirements using HTML, CSS, and JavaScript. The HTML file includes the form to input the PSID, and upon submission, displays the options to either approve a service desk nomination or upload an approved bulk-nominated CSV file. 
 
-### HTML (`index.html`)
+Here's an example of how you can achieve this using HTML, JavaScript (to fetch the JSON and handle the checkboxes), and a bit of CSS for styling. This example includes a simple table that displays data fetched from a JSON endpoint, adds checkboxes to each row, and sends the details of checked rows via a POST request when submitted.
 
+### HTML:
 ```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Service Desk Nomination</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>JSON Table with Checkboxes</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Service Desk Nomination</h1>
-        <form id="psidForm">
-            <label for="psid">Enter PSID:</label>
-            <input type="text" id="psid" name="psid" required>
-            <button type="submit">Submit</button>
-        </form>
-        <div id="options" class="hidden">
-            <button id="approveBtn">Approve Service Desk Nomination</button>
-            <button id="uploadBtn">Upload Approved Bulk Nominated CSV File</button>
-        </div>
-        <div id="result"></div>
-    </div>
-    <script src="script.js"></script>
+
+<h2>Data Table</h2>
+<div id="table-container"></div>
+<button onclick="submitCheckedRows()">Submit</button>
+
+<script>
+    async function fetchData() {
+        const response = await fetch('your-json-endpoint-url');
+        const data = await response.json();
+        generateTable(data);
+    }
+
+    function generateTable(data) {
+        const tableContainer = document.getElementById('table-container');
+        let tableHTML = '<table><thead><tr><th>Select</th>';
+
+        // Create table headers
+        Object.keys(data[0]).forEach(key => {
+            tableHTML += `<th>${key}</th>`;
+        });
+        tableHTML += '</tr></thead><tbody>';
+
+        // Create table rows
+        data.forEach((row, index) => {
+            tableHTML += `<tr><td><input type="checkbox" class="row-checkbox" data-index="${index}"></td>`;
+            Object.values(row).forEach(value => {
+                tableHTML += `<td>${value}</td>`;
+            });
+            tableHTML += '</tr>';
+        });
+        tableHTML += '</tbody></table>';
+
+        tableContainer.innerHTML = tableHTML;
+    }
+
+    async function submitCheckedRows() {
+        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        const selectedData = [];
+
+        checkedBoxes.forEach(box => {
+            const rowIndex = box.dataset.index;
+            const row = document.querySelectorAll('tbody tr')[rowIndex];
+            const rowData = {};
+            row.querySelectorAll('td:not(:first-child)').forEach((cell, i) => {
+                rowData[document.querySelectorAll('th')[i+1].innerText] = cell.innerText;
+            });
+            selectedData.push(rowData);
+        });
+
+        const response = await fetch('your-post-endpoint-url', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(selectedData),
+        });
+
+        if (response.ok) {
+            alert('Data submitted successfully!');
+        } else {
+            alert('Failed to submit data.');
+        }
+    }
+
+    // Fetch data and generate table on page load
+    window.onload = fetchData;
+</script>
+
 </body>
 </html>
 ```
 
-### CSS (`styles.css`)
-
-```css
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f0f0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-}
-
-.container {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    text-align: center;
-}
-
-h1 {
-    margin-bottom: 20px;
-}
-
-label {
-    display: block;
-    margin-bottom: 8px;
-}
-
-input[type="text"] {
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-button {
-    padding: 10px 20px;
-    margin: 10px;
-    border: none;
-    background-color: #007bff;
-    color: white;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-button:hover {
-    background-color: #0056b3;
-}
-
-.hidden {
-    display: none;
-}
-```
-
-### JavaScript (`script.js`)
-
-```javascript
-document.getElementById('psidForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    document.getElementById('options').classList.remove('hidden');
-});
-
-document.getElementById('approveBtn').addEventListener('click', function() {
-    const psid = document.getElementById('psid').value;
-    fetch(`/api/approve?psid=${psid}`)
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('result').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
-        })
-        .catch(error => {
-            document.getElementById('result').innerHTML = `<p>Error fetching data: ${error}</p>`;
-        });
-});
-
-document.getElementById('uploadBtn').addEventListener('click', function() {
-    const uploadDiv = document.createElement('div');
-    uploadDiv.innerHTML = `
-        <input type="file" id="csvFile" accept=".csv">
-        <button id="uploadCsvBtn">Upload CSV</button>
-    `;
-    document.getElementById('result').appendChild(uploadDiv);
-
-    document.getElementById('uploadCsvBtn').addEventListener('click', function() {
-        const fileInput = document.getElementById('csvFile');
-        const file = fileInput.files[0];
-        const formData = new FormData();
-        formData.append('file', file);
-
-        fetch('/api/upload', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('result').innerHTML = `<p>File uploaded successfully: ${JSON.stringify(data)}</p>`;
-        })
-        .catch(error => {
-            document.getElementById('result').innerHTML = `<p>Error uploading file: ${error}</p>`;
-        });
-    });
-});
-```
-
-### Explanation
-
-1. **HTML:**
-    - The form asks for a PSID and submits it.
-    - Two options appear after the form is submitted: approving the service desk nomination or uploading a CSV file.
-    - The result of either action will be displayed in the `#result` div.
+### Explanation:
+1. **HTML Structure:**
+   - A `div` with the id `table-container` to hold the generated table.
+   - A `button` to trigger the submission of checked rows.
 
 2. **CSS:**
-    - Basic styling for the form and buttons to make them visually appealing.
+   - Basic styles for the table to make it more readable.
 
 3. **JavaScript:**
-    - Handles the form submission to show options.
-    - Handles the click event for approving the service desk nomination, fetching data based on the PSID, and displaying the result.
-    - Handles the click event for uploading a CSV file, sending the file as a `POST` request, and displaying the result.
+   - `fetchData`: Fetches JSON data from the specified endpoint and calls `generateTable` to create the table.
+   - `generateTable`: Dynamically creates the table with checkboxes in the first column and populates it with data.
+   - `submitCheckedRows`: Collects data from the checked rows and sends it via a POST request to the specified endpoint.
 
-Make sure to replace the `/api/approve` and `/api/upload` URLs with your actual backend endpoints.
+Make sure to replace `'your-json-endpoint-url'` with the actual URL where your JSON data is available and `'your-post-endpoint-url'` with the endpoint where you want to send the selected data. 
