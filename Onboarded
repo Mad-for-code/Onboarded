@@ -1,113 +1,101 @@
+To send an email using your Outlook mailbox via SMTP with JavaMail, follow these steps:
 
-Here's an example of how you can achieve this using HTML, JavaScript (to fetch the JSON and handle the checkboxes), and a bit of CSS for styling. This example includes a simple table that displays data fetched from a JSON endpoint, adds checkboxes to each row, and sends the details of checked rows via a POST request when submitted.
+### Outlook SMTP Settings
 
-### HTML:
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSON Table with Checkboxes</title>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid black;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-    </style>
-</head>
-<body>
+- **SMTP Server**: `smtp-mail.outlook.com`
+- **Port**: `587` (TLS/STARTTLS) or `465` (SSL)
+- **Username**: Your full Outlook email address (e.g., `your-email@outlook.com`)
+- **Password**: Your Outlook account password
 
-<h2>Data Table</h2>
-<div id="table-container"></div>
-<button onclick="submitCheckedRows()">Submit</button>
+### Example Code
 
-<script>
-    async function fetchData() {
-        const response = await fetch('your-json-endpoint-url');
-        const data = await response.json();
-        generateTable(data);
-    }
+Here's an example code snippet to send an email using JavaMail with your Outlook account:
 
-    function generateTable(data) {
-        const tableContainer = document.getElementById('table-container');
-        let tableHTML = '<table><thead><tr><th>Select</th>';
+```java
+import java.util.Properties;
+import javax.mail.*;
+import javax.mail.internet.*;
 
-        // Create table headers
-        Object.keys(data[0]).forEach(key => {
-            tableHTML += `<th>${key}</th>`;
-        });
-        tableHTML += '</tr></thead><tbody>';
+public class EmailSender {
 
-        // Create table rows
-        data.forEach((row, index) => {
-            tableHTML += `<tr><td><input type="checkbox" class="row-checkbox" data-index="${index}"></td>`;
-            Object.values(row).forEach(value => {
-                tableHTML += `<td>${value}</td>`;
-            });
-            tableHTML += '</tr>';
-        });
-        tableHTML += '</tbody></table>';
+    public static void main(String[] args) {
 
-        tableContainer.innerHTML = tableHTML;
-    }
+        // Recipient's email ID
+        String to = "recipient@example.com";
 
-    async function submitCheckedRows() {
-        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
-        const selectedData = [];
+        // Sender's email ID (your email)
+        String from = "your-email@outlook.com";
+        
+        // SMTP server information
+        String host = "smtp-mail.outlook.com";
+        final String username = "your-email@outlook.com"; // Your Outlook email address
+        final String password = "your-email-password"; // Your Outlook password
 
-        checkedBoxes.forEach(box => {
-            const rowIndex = box.dataset.index;
-            const row = document.querySelectorAll('tbody tr')[rowIndex];
-            const rowData = {};
-            row.querySelectorAll('td:not(:first-child)').forEach((cell, i) => {
-                rowData[document.querySelectorAll('th')[i+1].innerText] = cell.innerText;
-            });
-            selectedData.push(rowData);
-        });
+        // Setting up mail server properties
+        Properties properties = new Properties();
+        properties.put("mail.smtp.auth", "true");
+        properties.put("mail.smtp.starttls.enable", "true");
+        properties.put("mail.smtp.host", host);
+        properties.put("mail.smtp.port", "587"); // Use 465 for SSL
 
-        const response = await fetch('your-post-endpoint-url', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(selectedData),
-        });
+        // Get the default Session object
+        Session session = Session.getInstance(properties,
+          new javax.mail.Authenticator() {
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(username, password);
+            }
+          });
 
-        if (response.ok) {
-            alert('Data submitted successfully!');
-        } else {
-            alert('Failed to submit data.');
+        try {
+            // Create a default MimeMessage object
+            Message message = new MimeMessage(session);
+
+            // Set From: header field
+            message.setFrom(new InternetAddress(from));
+
+            // Set To: header field
+            message.setRecipients(Message.RecipientType.TO,
+                    InternetAddress.parse(to));
+
+            // Set Subject: header field
+            message.setSubject("Test Subject");
+
+            // Set the actual message
+            message.setText("This is a test email sent from JavaMail via Outlook");
+
+            // Send message
+            Transport.send(message);
+
+            System.out.println("Sent message successfully....");
+
+        } catch (MessagingException e) {
+            throw new RuntimeException(e);
         }
     }
-
-    // Fetch data and generate table on page load
-    window.onload = fetchData;
-</script>
-
-</body>
-</html>
+}
 ```
 
-### Explanation:
-1. **HTML Structure:**
-   - A `div` with the id `table-container` to hold the generated table.
-   - A `button` to trigger the submission of checked rows.
+### Key Points
 
-2. **CSS:**
-   - Basic styles for the table to make it more readable.
+1. **SMTP Server**:
+   - `smtp-mail.outlook.com` is the SMTP server for Outlook.
+   - Use port `587` for TLS/STARTTLS or port `465` for SSL.
 
-3. **JavaScript:**
-   - `fetchData`: Fetches JSON data from the specified endpoint and calls `generateTable` to create the table.
-   - `generateTable`: Dynamically creates the table with checkboxes in the first column and populates it with data.
-   - `submitCheckedRows`: Collects data from the checked rows and sends it via a POST request to the specified endpoint.
+2. **Username and Password**:
+   - **Username**: Your full Outlook email address (e.g., `your-email@outlook.com`).
+   - **Password**: Your Outlook account password.
 
-Make sure to replace `'your-json-endpoint-url'` with the actual URL where your JSON data is available and `'your-post-endpoint-url'` with the endpoint where you want to send the selected data. 
+3. **SMTP Properties**:
+   - Ensure `mail.smtp.auth` is set to `true` to enable SMTP authentication.
+   - Ensure `mail.smtp.starttls.enable` is set to `true` if using TLS/STARTTLS.
+   - Set `mail.smtp.host` to `smtp-mail.outlook.com`.
+   - Set `mail.smtp.port` to `587` (or `465` if using SSL).
+
+4. **Security**:
+   - Be cautious with storing passwords directly in code; consider using environment variables or secure configuration management solutions.
+
+5. **Troubleshooting**:
+   - If you encounter authentication issues, ensure your Outlook account is correctly set up to allow SMTP access.
+   - Verify that your network connection allows outgoing connections on the required ports (587 or 465).
+
+This code should allow you to send an email from your Outlook mailbox using JavaMail and SMTP.
