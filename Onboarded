@@ -1,101 +1,21 @@
-To send an email using your Outlook mailbox via SMTP with JavaMail, follow these steps:
 
-### Outlook SMTP Settings
+public void insert(String rowKey, Boolean value) {
+    try {
+        // Create a mutation to apply to the row
+        RowMutation mutation = RowMutation.create("your-table-id", rowKey);
 
-- **SMTP Server**: `smtp-mail.outlook.com`
-- **Port**: `587` (TLS/STARTTLS) or `465` (SSL)
-- **Username**: Your full Outlook email address (e.g., `your-email@outlook.com`)
-- **Password**: Your Outlook account password
-
-### Example Code
-
-Here's an example code snippet to send an email using JavaMail with your Outlook account:
-
-```java
-import java.util.Properties;
-import javax.mail.*;
-import javax.mail.internet.*;
-
-public class EmailSender {
-
-    public static void main(String[] args) {
-
-        // Recipient's email ID
-        String to = "recipient@example.com";
-
-        // Sender's email ID (your email)
-        String from = "your-email@outlook.com";
-        
-        // SMTP server information
-        String host = "smtp-mail.outlook.com";
-        final String username = "your-email@outlook.com"; // Your Outlook email address
-        final String password = "your-email-password"; // Your Outlook password
-
-        // Setting up mail server properties
-        Properties properties = new Properties();
-        properties.put("mail.smtp.auth", "true");
-        properties.put("mail.smtp.starttls.enable", "true");
-        properties.put("mail.smtp.host", host);
-        properties.put("mail.smtp.port", "587"); // Use 465 for SSL
-
-        // Get the default Session object
-        Session session = Session.getInstance(properties,
-          new javax.mail.Authenticator() {
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(username, password);
-            }
-          });
-
-        try {
-            // Create a default MimeMessage object
-            Message message = new MimeMessage(session);
-
-            // Set From: header field
-            message.setFrom(new InternetAddress(from));
-
-            // Set To: header field
-            message.setRecipients(Message.RecipientType.TO,
-                    InternetAddress.parse(to));
-
-            // Set Subject: header field
-            message.setSubject("Test Subject");
-
-            // Set the actual message
-            message.setText("This is a test email sent from JavaMail via Outlook");
-
-            // Send message
-            Transport.send(message);
-
-            System.out.println("Sent message successfully....");
-
-        } catch (MessagingException e) {
-            throw new RuntimeException(e);
+        // Check if the value is not null
+        if (value != null) {
+            // Insert the value in the 'cf1' column family and 'status' column
+            mutation.setCell("cf1", "status", value.toString());
         }
+
+        // Apply the mutation to the table
+        dataClient.mutateRow(mutation);
+
+        System.out.println("Row inserted successfully.");
+    } catch (Exception e) {
+        System.err.println("Failed to insert row: " + e.getMessage());
+        e.printStackTrace();
     }
 }
-```
-
-### Key Points
-
-1. **SMTP Server**:
-   - `smtp-mail.outlook.com` is the SMTP server for Outlook.
-   - Use port `587` for TLS/STARTTLS or port `465` for SSL.
-
-2. **Username and Password**:
-   - **Username**: Your full Outlook email address (e.g., `your-email@outlook.com`).
-   - **Password**: Your Outlook account password.
-
-3. **SMTP Properties**:
-   - Ensure `mail.smtp.auth` is set to `true` to enable SMTP authentication.
-   - Ensure `mail.smtp.starttls.enable` is set to `true` if using TLS/STARTTLS.
-   - Set `mail.smtp.host` to `smtp-mail.outlook.com`.
-   - Set `mail.smtp.port` to `587` (or `465` if using SSL).
-
-4. **Security**:
-   - Be cautious with storing passwords directly in code; consider using environment variables or secure configuration management solutions.
-
-5. **Troubleshooting**:
-   - If you encounter authentication issues, ensure your Outlook account is correctly set up to allow SMTP access.
-   - Verify that your network connection allows outgoing connections on the required ports (587 or 465).
-
-This code should allow you to send an email from your Outlook mailbox using JavaMail and SMTP.
