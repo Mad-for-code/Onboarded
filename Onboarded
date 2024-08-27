@@ -1,21 +1,58 @@
+import org.apache.beam.sdk.transforms.SimpleFunction;
+import org.apache.beam.sdk.values.KV;
 
-public void insert(String rowKey, Boolean value) {
-    try {
-        // Create a mutation to apply to the row
-        RowMutation mutation = RowMutation.create("your-table-id", rowKey);
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.ConcurrentHashMap;
 
-        // Check if the value is not null
-        if (value != null) {
-            // Insert the value in the 'cf1' column family and 'status' column
-            mutation.setCell("cf1", "status", value.toString());
+public class EventTransformer extends SimpleFunction<String, KV<String, ConcurrentHashMap<String, String>>> {
+    
+    private final ConcurrentHashMap<String, String> rowKeyCache = new ConcurrentHashMap<>();
+
+    @Override
+    public KV<String, ConcurrentHashMap<String, String>> apply(String input) {
+        String[] fields = input.split(",");
+        ConcurrentHashMap<String, String> eventMap = new ConcurrentHashMap<>();
+        StringBuilder rowKeyBuilder = new StringBuilder();
+
+        for (String field : fields) {
+            String[] keyValue = field.split("=");
+            eventMap.put(keyValue[0], keyValue[1]);
+            // Assuming we hash the value of "field1" and "field2" for row key
+            if ("field1".equals(keyValue[0]) || "field2".equals(keyValue[0])) {
+                rowKeyBuilder.append(keyValue[1]);
+            }
         }
 
-        // Apply the mutation to the table
-        dataClient.mutateRow(mutation);
+        String rowKey = generateHash(rowKeyBuilder.toString());
 
-        System.out.println("Row inserted successfully.");
-    } catch (Exception e) {
-        System.err.println("Failed to insert row: " + e.getMessage());
-        e.printStackTrace();
+        // Check for duplicate row key
+        if (rowKeyCache.containsKey(rowKey)) {
+            // If row key already exists, return null or handle as necessary
+            return null;
+        } else {
+            // Store the new row key in cache
+            rowKeyCache.put(rowKey, rowKey);
+            return KV.of(rowKey, eventMap);
+        }
+    }
+
+    private String generateHash(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encodedHash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder(2 * encodedHash.length);
+            for (byte b : encodedHash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error generating hash", e);
+        }
     }
 }
