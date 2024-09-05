@@ -1,13 +1,23 @@
 
-Subject: Join Us in Reviving the TIP Initiative for 2024!
+import org.apache.commons.codec.digest.DigestUtils;
+import java.nio.charset.StandardCharsets;
 
-Dear Team,
+public class HashGenerator {
 
-I am excited to announce the revival of the Talent Investment Program (TIP) for 2024 as part of our Vision 27 strategy under the people pillar within GPS Data. TIP has proven to be a powerful initiative, enabling our people to share and learn cross-functional skills and processes, ensuring we have the right talent equipped with the necessary skills and tools for the future.
+    public static String generateSHA256Hash(String... fields) {
+        // Concatenate the fields into a single string
+        StringBuilder concatenatedFields = new StringBuilder();
+        for (String field : fields) {
+            concatenatedFields.append(field);
+        }
 
-Your participation is key to continuing our success. Let’s come together to invest in our growth and secure our future.
+        // Generate the SHA-256 hash
+        return DigestUtils.sha256Hex(concatenatedFields.toString().getBytes(StandardCharsets.UTF_8));
+    }
 
-More details to follow soon.
-
-Best regards,  
-[Your Name]
+    public static void main(String[] args) {
+        // Example usage: Hashing based on nomineeName, nomineeEmail, and nomineePsid
+        String hash = generateSHA256Hash("John Doe", "johndoe@example.com", "123456");
+        System.out.println("Generated SHA-256 Hash: " + hash);
+    }
+}
